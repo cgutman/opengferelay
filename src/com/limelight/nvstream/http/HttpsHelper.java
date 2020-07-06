@@ -3,7 +3,7 @@ package com.limelight.nvstream.http;
 import java.io.IOException;
 import java.net.MalformedURLException;
 
-import com.squareup.okhttp.ResponseBody;
+import okhttp3.ResponseBody;
 
 public class HttpsHelper {
 	// This is nasty but it allows us to use a bunch of logic already contained in NvHTTP

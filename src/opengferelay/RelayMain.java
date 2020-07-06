@@ -14,7 +14,6 @@ import opengferelay.simplerelay.TcpRelay;
 import opengferelay.simplerelay.UdpRelay;
 
 public class RelayMain {
-	private static final String UNIQUE_ID = "f00ff00ff00ff00f";
 	private static final PcCryptoProvider cryptoProvider = new PcCryptoProvider();
 
 	private static final int SXS_HTTPS_PORT = 37984;
@@ -31,8 +30,8 @@ public class RelayMain {
 	public static boolean pair(InetAddress host) {
 		System.out.println("Checking pair status with server...");
 		
-		NvHTTP httpConn = new NvHTTP(host, UNIQUE_ID, null, cryptoProvider);
 		try {
+			NvHTTP httpConn = new NvHTTP(host.getHostAddress(), cryptoProvider);
 			if (httpConn.getPairState() == PairingManager.PairState.PAIRED) {
 				System.out.println("Already paired to server");
 				return true;
@@ -42,7 +41,7 @@ public class RelayMain {
 				
 				System.out.println("Please type the following PIN on the remote PC: "+pinStr);
 				
-				PairingManager.PairState pairState = httpConn.pair(httpConn.getServerInfo(), pinStr);
+				PairingManager.PairState pairState = httpConn.getPairingManager().pair(httpConn.getServerInfo(), pinStr);
 				if (pairState == PairingManager.PairState.PIN_WRONG) {
 					System.out.println("Incorrect PIN");
 				}
@@ -79,13 +78,13 @@ public class RelayMain {
 		HttpsRelay httpsRelay = new HttpsRelay(
 				InetAddress.getByName(args[1]).getHostAddress(),
 				InetAddress.getByName(args[2]).getHostAddress(),
-				remoteAddr, UNIQUE_ID, cryptoProvider);
+				remoteAddr, cryptoProvider);
 		
 		// HTTP server
 		HttpsRelay httpRelay = new HttpsRelay(
 				InetAddress.getByName(args[1]).getHostAddress(),
 				InetAddress.getByName(args[2]).getHostAddress(),
-				remoteAddr, UNIQUE_ID, cryptoProvider);
+				remoteAddr, cryptoProvider);
 		
 		try {
 			// Try non-SxS mode first

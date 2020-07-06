@@ -15,11 +15,9 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 import java.security.Security;
-import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
-import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Calendar;
 import java.util.Date;
@@ -85,22 +83,10 @@ public class GfeKeyProvider {
 			
 			KeyFactory keyFactory = KeyFactory.getInstance("RSA", "BC");
 			key = (RSAPrivateKey) keyFactory.generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
-		} catch (CertificateException e) {
-			// May happen if the cert is corrupt
-			System.err.println("Corrupted certificate");
-			return false;
-		} catch (NoSuchAlgorithmException e) {
-			// Should never happen
-			e.printStackTrace();
-			return false;
-		} catch (InvalidKeySpecException e) {
-			// May happen if the key is corrupt
-			System.err.println("Corrupted key");
-			return false;
-		} catch (NoSuchProviderException e) {
-			// Should never happen
-			e.printStackTrace();
-			return false;
+		} catch (Exception e) {
+			// The user may have manually placed these files, so don't wipe them out
+			// if we can't read them. Just throw an exception and let them figure it out.
+			throw new RuntimeException(e);
 		}
 		
 		System.out.println("Loaded key pair from disk");
@@ -143,7 +129,7 @@ public class GfeKeyProvider {
 		X509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder(name, serial, now, expirationDate, name, keyPair.getPublic());
 				
 		try {
-			ContentSigner sigGen = new JcaContentSignerBuilder("SHA1withRSA").setProvider(BouncyCastleProvider.PROVIDER_NAME).build(keyPair.getPrivate());
+			ContentSigner sigGen = new JcaContentSignerBuilder("SHA256withRSA").setProvider(BouncyCastleProvider.PROVIDER_NAME).build(keyPair.getPrivate());
 			cert = new JcaX509CertificateConverter().setProvider(BouncyCastleProvider.PROVIDER_NAME).getCertificate(certBuilder.build(sigGen));
 			key = (RSAPrivateKey) keyPair.getPrivate();
 		} catch (Exception e) {

@@ -37,7 +37,6 @@ import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.util.encoders.Base64;
 
-import com.limelight.LimeLog;
 import com.limelight.nvstream.http.LimelightCryptoProvider;
 
 public class PcCryptoProvider implements LimelightCryptoProvider {
@@ -76,7 +75,7 @@ public class PcCryptoProvider implements LimelightCryptoProvider {
 		
 		// If either file was missing, we definitely can't succeed
 		if (certBytes == null || keyBytes == null) {
-			LimeLog.info("Missing cert or key; need to generate a new one");
+			System.out.println("Missing cert or key; need to generate a new one");
 			return false;
 		}
 		
@@ -89,7 +88,7 @@ public class PcCryptoProvider implements LimelightCryptoProvider {
 			key = (RSAPrivateKey) keyFactory.generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
 		} catch (CertificateException e) {
 			// May happen if the cert is corrupt
-			LimeLog.warning("Corrupted certificate");
+			System.err.println("Corrupted certificate");
 			return false;
 		} catch (NoSuchAlgorithmException e) {
 			// Should never happen
@@ -97,7 +96,7 @@ public class PcCryptoProvider implements LimelightCryptoProvider {
 			return false;
 		} catch (InvalidKeySpecException e) {
 			// May happen if the key is corrupt
-			LimeLog.warning("Corrupted key");
+			System.err.println("Corrupted key");
 			return false;
 		} catch (NoSuchProviderException e) {
 			// Should never happen
@@ -105,7 +104,7 @@ public class PcCryptoProvider implements LimelightCryptoProvider {
 			return false;
 		}
 		
-		LimeLog.info("Loaded key pair from disk");
+		System.out.println("Loaded key pair from disk");
 		return true;
 	}
 	
@@ -146,7 +145,7 @@ public class PcCryptoProvider implements LimelightCryptoProvider {
 				SubjectPublicKeyInfo.getInstance(keyPair.getPublic().getEncoded()));
 
 		try {
-			ContentSigner sigGen = new JcaContentSignerBuilder("SHA1withRSA").setProvider(BouncyCastleProvider.PROVIDER_NAME).build(keyPair.getPrivate());
+			ContentSigner sigGen = new JcaContentSignerBuilder("SHA256withRSA").setProvider(BouncyCastleProvider.PROVIDER_NAME).build(keyPair.getPrivate());
 			cert = new JcaX509CertificateConverter().setProvider(BouncyCastleProvider.PROVIDER_NAME).getCertificate(certBuilder.build(sigGen));
 			key = (RSAPrivateKey) keyPair.getPrivate();
 		} catch (Exception e) {
@@ -155,7 +154,7 @@ public class PcCryptoProvider implements LimelightCryptoProvider {
 			return false;
 		}
 		
-		LimeLog.info("Generated a new key pair");
+		System.out.println("Generated a new key pair");
 		
 		// Save the resulting pair
 		saveCertKeyPair();
@@ -190,7 +189,7 @@ public class PcCryptoProvider implements LimelightCryptoProvider {
 			certOut.close();
 			keyOut.close();
 			
-			LimeLog.info("Saved generated key pair to disk");
+			System.out.println("Saved generated key pair to disk");
 		} catch (IOException e) {
 			// This isn't good because it means we'll have
 			// to re-pair next time

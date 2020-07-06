@@ -1,5 +1,6 @@
 package opengferelay.https;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.security.KeyManagementException;
@@ -28,15 +29,13 @@ public class HttpsRelay {
 	private static final GfeKeyProvider keyProvider = new GfeKeyProvider();
 	
 	private final NvHTTP httpObj;
-	private final String uniqueId;
 	private final String reportedLocalAddress, reportedRemoteAddress;
 	
 	public HttpsRelay(String reportedLocalAddress, String reportedRemoteAddress, 
-			InetAddress remoteAddress, String uniqueId, LimelightCryptoProvider cryptoProv) {
-		this.uniqueId = uniqueId;
+			InetAddress remoteAddress, LimelightCryptoProvider cryptoProv) throws IOException {
 		this.reportedLocalAddress = reportedLocalAddress;
 		this.reportedRemoteAddress = reportedRemoteAddress;
-		this.httpObj = new NvHTTP(remoteAddress, uniqueId, "", cryptoProv);
+		this.httpObj = new NvHTTP(remoteAddress.getHostAddress(), cryptoProv);
 	}
 	
 	private SSLContext createSslContext() throws NoSuchAlgorithmException, KeyManagementException {
@@ -161,15 +160,6 @@ public class HttpsRelay {
 							Map<String, String> parameters) {
 						String fullUrl = constructFullUrlString(url, parameters);
 						System.out.println("Got request: "+fullUrl);
-						
-						// Any request coming in will automatically get the unique ID changed
-						// for it which knocks out 90% of the work of the standard launch, applist,
-						// resume, cancel, etc. handlers. Only serverinfo needs special handling to
-						// patch up IPs.
-						if (parameters.remove("uniqueid") != null) {
-							parameters.put("uniqueid", uniqueId);
-							fullUrl = constructFullUrlString(url, parameters);
-						}
 						
 						Response resp = new Response();
 						
