@@ -5,7 +5,6 @@ RUN ./gradlew shadowJar
 
 FROM openjdk:14-alpine
 COPY --from=build-env /opt/build/libs/opengferelay-all.jar /opt
-USER nobody
 
 EXPOSE 47984/tcp \
        47989/tcp \
@@ -16,4 +15,6 @@ EXPOSE 47984/tcp \
        48002/udp \
        48010/udp
 
+VOLUME /opt/keys
+WORKDIR /opt/keys
 ENTRYPOINT ["java", "-jar", "/opt/opengferelay-all.jar"]
