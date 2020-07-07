@@ -19,6 +19,7 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -32,18 +33,14 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
-import org.bouncycastle.util.encoders.Base64;
 
-// Those playing at home will realize this is 99% identical to Limelight-PC's
-// PcCryptoProvider class
 public class GfeKeyProvider {
 
 	private File certFile = new File("gfe-server.crt");
 	private File keyFile = new File("gfe-server.key");
 	
-	private X509Certificate cert;
+	private ArrayList<X509Certificate> certs;
 	private RSAPrivateKey key;
-	private byte[] pemCertBytes;
 	
 	static {
 		// Install the Bouncy Castle provider
@@ -78,8 +75,13 @@ public class GfeKeyProvider {
 		
 		try {
 			CertificateFactory certFactory = CertificateFactory.getInstance("X.509", "BC");
-			cert = (X509Certificate) certFactory.generateCertificate(new ByteArrayInputStream(certBytes));
-			pemCertBytes = certBytes;
+			
+			ByteArrayInputStream bis = new ByteArrayInputStream(certBytes);
+			certs = new ArrayList<>();
+			while (bis.available() > 0) {
+				certs.add((X509Certificate) certFactory.generateCertificate(bis));
+			}
+			System.out.println("Certificate chain length: "+certs.size());
 			
 			KeyFactory keyFactory = KeyFactory.getInstance("RSA", "BC");
 			key = (RSAPrivateKey) keyFactory.generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
@@ -130,7 +132,8 @@ public class GfeKeyProvider {
 				
 		try {
 			ContentSigner sigGen = new JcaContentSignerBuilder("SHA256withRSA").setProvider(BouncyCastleProvider.PROVIDER_NAME).build(keyPair.getPrivate());
-			cert = new JcaX509CertificateConverter().setProvider(BouncyCastleProvider.PROVIDER_NAME).getCertificate(certBuilder.build(sigGen));
+			certs = new ArrayList<>();
+			certs.add(new JcaX509CertificateConverter().setProvider(BouncyCastleProvider.PROVIDER_NAME).getCertificate(certBuilder.build(sigGen)));
 			key = (RSAPrivateKey) keyPair.getPrivate();
 		} catch (Exception e) {
 			// Nothing should go wrong here
@@ -154,7 +157,9 @@ public class GfeKeyProvider {
 			// Write the certificate in OpenSSL PEM format (important for the server)
 			StringWriter strWriter = new StringWriter();
 			JcaPEMWriter pemWriter = new JcaPEMWriter(strWriter);
-			pemWriter.writeObject(cert);
+			for (X509Certificate cert : certs) {
+				pemWriter.writeObject(cert);
+			}
 			pemWriter.close();
 			
 			// Line endings MUST be UNIX for the PC to accept the cert properly
@@ -181,30 +186,25 @@ public class GfeKeyProvider {
 		}
 	}
 	
-	public X509Certificate getServerCertificate() {
+	public X509Certificate[] getServerCertificateChain() {
 		// Use a lock here to ensure only one guy will be generating or loading
 		// the certificate and key at a time
 		synchronized (this) {
-			// Return a loaded cert if we have one
-			if (cert != null) {
-				return cert;
+			if (certs == null) {
+				// No loaded cert yet, let's see if we have one on disk
+				if (!loadCertKeyPair()) {
+					// Nope, try to generate a new key pair
+					if (!generateCertKeyPair()) {
+						// Failed
+						return null;
+					}
+					
+					// Load the generated pair
+					loadCertKeyPair();
+				}
 			}
 			
-			// No loaded cert yet, let's see if we have one on disk
-			if (loadCertKeyPair()) {
-				// Got one
-				return cert;
-			}
-			
-			// Try to generate a new key pair
-			if (!generateCertKeyPair()) {
-				// Failed
-				return null;
-			}
-			
-			// Load the generated pair
-			loadCertKeyPair();
-			return cert;
+			return certs.toArray(new X509Certificate[0]);
 		}
 	}
 
@@ -234,19 +234,4 @@ public class GfeKeyProvider {
 			return key;
 		}
 	}
-	
-	public byte[] getPemEncodedServerCertificate() {
-		synchronized (this) {
-			// Call our helper function to do the cert loading/generation for us
-			getServerCertificate();
-			
-			// Return a cached value if we have it
-			return pemCertBytes;
-		}
-	}
-
-	public String encodeBase64String(byte[] data) {
-		return Base64.toBase64String(data);
-	}
-	
 }

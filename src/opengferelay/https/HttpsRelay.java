@@ -36,6 +36,9 @@ public class HttpsRelay {
 		this.reportedLocalAddress = reportedLocalAddress;
 		this.reportedRemoteAddress = reportedRemoteAddress;
 		this.httpObj = new NvHTTP(remoteAddress.getHostAddress(), cryptoProv);
+		
+		// Force the key pair to be loaded now to ensure it successfully loads
+		keyProvider.getServerCertificateChain();
 	}
 	
 	private SSLContext createSslContext() throws NoSuchAlgorithmException, KeyManagementException {
@@ -62,7 +65,7 @@ public class HttpsRelay {
 					}
 
 					public X509Certificate[] getCertificateChain(String alias) {
-						return new X509Certificate[] {keyProvider.getServerCertificate()};
+						return keyProvider.getServerCertificateChain();
 					}
 
 					public String[] getClientAliases(String keyType, Principal[] issuers) {
