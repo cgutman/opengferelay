@@ -1,9 +1,9 @@
-FROM gradle:jdk8 AS build-env
+FROM gradle:jdk17 AS build-env
 WORKDIR /opt
 COPY . .
 RUN ./gradlew shadowJar
 
-FROM openjdk:8-alpine
+FROM openjdk:17-slim
 COPY --from=build-env /opt/build/libs/opengferelay-all.jar /opt
 
 EXPOSE 47984/tcp \
