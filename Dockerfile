@@ -3,7 +3,7 @@ WORKDIR /opt
 COPY . .
 RUN ./gradlew shadowJar
 
-FROM openjdk:17-slim
+FROM eclipse-temurin:17-jre-alpine
 COPY --from=build-env /opt/build/libs/opengferelay-all.jar /opt
 
 EXPOSE 47984/tcp \
